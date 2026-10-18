@@ -1,81 +1,506 @@
 
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>UniSinosphere | 漢字文化圈</title>
+
   <style>
+
+    /* =========================
+       整體頁面
+       ========================= */
+
     body {
       margin: 0;
-      font-family: "Noto Sans CJK TC", sans-serif;
+      font-family:
+        "Noto Sans CJK TC",
+        "Noto Sans TC",
+        "Microsoft JhengHei",
+        sans-serif;
+
       background-color: #f8f6f1;
+
       background-image:
         linear-gradient(
           rgba(248, 246, 241, 0.88),
           rgba(248, 246, 241, 0.88)
         ),
         url("hunminjeongeum.jpg");
+
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
+
       color: #252525;
-      text-align: center;
     }
 
+    /* =========================
+       主要內容
+       ========================= */
+
     main {
-      max-width: 760px;
-      margin: 100px auto;
+      max-width: 860px;
+      margin: 70px auto;
       padding: 24px;
+    }
+
+    /* =========================
+       網站標題
+       ========================= */
+
+    header {
+      text-align: center;
+      margin-bottom: 55px;
     }
 
     h1 {
       font-size: 48px;
       margin-bottom: 8px;
+      letter-spacing: 1px;
     }
 
     h2 {
+      font-size: 22px;
       font-weight: normal;
       color: #777;
+      margin-top: 0;
     }
 
-    p {
+    .intro {
+      font-size: 19px;
+      line-height: 1.9;
+      text-align: center;
+      margin-top: 32px;
+    }
+
+    /* =========================
+       文章區域
+       ========================= */
+
+    .article {
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 14px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .article h3 {
+      text-align: center;
+      font-size: 28px;
+      margin-top: 0;
+      margin-bottom: 34px;
+    }
+
+    .article h4 {
+      font-size: 22px;
+      margin-top: 38px;
+      margin-bottom: 14px;
+      color: #333;
+    }
+
+    .article p {
+      font-size: 17px;
+      line-height: 2;
+      margin-bottom: 22px;
+      text-align: justify;
+    }
+
+    /* =========================
+       漢字詞展示
+       ========================= */
+
+    .vocabulary {
+      margin: 30px 0;
+      padding: 24px;
+      background: #f8f6f1;
+      border-radius: 10px;
+    }
+
+    .vocabulary-title {
+      text-align: center;
       font-size: 18px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .word {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 10px;
+      border-bottom: 1px solid #e5e1d9;
+    }
+
+    .word:last-child {
+      border-bottom: none;
+    }
+
+    .hanja {
+      font-size: 23px;
+      font-weight: bold;
+    }
+
+    .hangul {
+      font-size: 16px;
+      color: #555;
+      text-align: right;
+    }
+
+    /* =========================
+       漢諺混寫展示
+       ========================= */
+
+    .comparison {
+      margin-top: 28px;
+      padding: 24px;
+      background: #f8f6f1;
+      border-radius: 10px;
+    }
+
+    .comparison-label {
+      font-size: 14px;
+      color: #777;
+      margin-bottom: 8px;
+    }
+
+    .comparison-text {
+      font-size: 20px;
+      line-height: 1.8;
+      margin-bottom: 24px;
+      overflow-wrap: anywhere;
+    }
+
+    .comparison-text:last-child {
+      margin-bottom: 0;
+    }
+
+    /* =========================
+       頁尾
+       ========================= */
+
+    footer {
+      margin-top: 50px;
+      text-align: center;
+      color: #777;
+      font-size: 14px;
       line-height: 1.9;
     }
 
-    .example {
-      margin-top: 48px;
-      padding: 24px;
-      background: white;
-      border-radius: 12px;
+    footer a {
+      color: #666;
     }
+
+    /* =========================
+       手機畫面
+       ========================= */
+
+    @media (max-width: 600px) {
+
+      body {
+        background-attachment: scroll;
+      }
+
+      main {
+        margin: 30px auto;
+        padding: 14px;
+      }
+
+      h1 {
+        font-size: 36px;
+      }
+
+      h2 {
+        font-size: 17px;
+      }
+
+      .article {
+        padding: 24px 20px;
+      }
+
+      .article h3 {
+        font-size: 24px;
+      }
+
+      .article p {
+        font-size: 16px;
+      }
+
+      .hanja {
+        font-size: 20px;
+      }
+
+      .comparison-text {
+        font-size: 17px;
+      }
+    }
+
   </style>
 </head>
 
+
 <body>
+
   <main>
-    <h1>UniSinosphere</h1>
-    <h2>漢字文化圈 · 한자문화권 · 漢字文化圏</h2>
 
-    <p>
-      探索漢字文化圈各種語言之間的聯繫。
-    </p>
+    <!-- =========================
+         網站標題
+         ========================= -->
 
-    <p>
-      大陸、台灣、朝鮮半島、越南、日本等地，
-      擁有不同的語言，卻共享著悠久的漢字文化傳統。
-    </p>
+    <header>
 
-    <div class="example">
-      <h3>今日漢字詞：文化</h3>
-      <p>普通話：文化（wénhuà）</p>
-      <p>朝鮮語：文化（문화）</p>
-      <p>日語：文化（ぶんか）</p>
-      <p>越南語：文化（văn hóa）</p>
-    </div>
+      <h1>UniSinosphere</h1>
 
-    <p>更多內容即將推出。</p>
+      <h2>
+        漢字文化圈 · 한자문화권 · 漢字文化圏
+      </h2>
+
+      <p class="intro">
+        探索漢字文化圈各種語言之間的聯繫。
+      </p>
+
+      <p class="intro">
+        中國大陸、臺灣、朝鮮半島、越南、日本等地，
+        擁有不同的語言，
+        卻共享著悠久的漢字文化傳統。
+      </p>
+
+    </header>
+
+
+    <!-- =========================
+         朝鮮語漢字音專題
+         ========================= -->
+
+    <article class="article">
+
+      <h3>朝鮮語漢字音與漢諺混寫</h3>
+
+
+      <h4>一、朝鮮半島的漢文傳統</h4>
+
+      <p>
+        朝鮮半島自古便是漢字文化圈的重要組成部分。
+        自三國時代起，高句麗、百濟、新羅等政權
+        逐漸採用漢字與漢文（即文言文），
+        作為記錄歷史、處理政務及學術交流的重要書寫工具。
+      </p>
+
+      <p>
+        這一傳統延續至高麗王朝，
+        以及與中國明、清兩朝先後並存的
+        朝鮮王朝（李氏朝鮮）。
+        尤其在朝鮮王朝時期，
+        以朱子學為核心的性理學，
+        成為士大夫學術與政治思想的重要基礎，
+        漢文亦長期占據正式書面語的重要地位。
+      </p>
+
+
+      <h4>二、朝鮮語漢字音的形成</h4>
+
+      <p>
+        隨著漢字與漢文的傳播，
+        朝鮮語逐漸形成了自身的漢字讀音體系，
+        稱為「朝鮮語漢字音」
+        （한자음，漢字音）。
+      </p>
+
+      <p>
+        這套讀音源於歷史上不同時期傳入的漢語讀音，
+        並經過朝鮮語音韻系統的適應與長期演變，
+        形成了相對穩定的讀法。
+        直至今日，大量漢字仍有可考的朝鮮語讀音，
+        並保存在漢字字典與傳統漢文教育之中。
+      </p>
+
+
+      <h4>三、現代朝鮮語中的漢字詞</h4>
+
+      <p>
+        漢字詞（한자어，漢字語）
+        在現代朝鮮語詞彙中占有重要地位。
+        根據韓國國立國語院公布的
+        《標準國語大辭典》詞條分類統計，
+        漢字詞約占全部詞條的55.6%。
+        這是詞典詞條的比例，
+        並不等同於日常語言中的使用頻率。
+      </p>
+
+      <p>
+        這些詞彙以朝鮮語漢字音構成，
+        可以寫成漢字。
+        其中許多與漢語、日語及其他漢字文化圈語言，
+        共享相同或相近的漢字書寫形式，
+        儘管各語言的讀音、用法與語義
+        可能有所不同。
+      </p>
+
+
+      <!-- 漢字詞舉例 -->
+
+      <div class="vocabulary">
+
+        <div class="vocabulary-title">
+          朝鮮語漢字詞示例
+        </div>
+
+        <div class="word">
+          <span class="hanja">學校</span>
+          <span class="hangul">
+            학교 · hakgyo
+          </span>
+        </div>
+
+        <div class="word">
+          <span class="hanja">經濟</span>
+          <span class="hangul">
+            경제 · gyeongje
+          </span>
+        </div>
+
+        <div class="word">
+          <span class="hanja">文化</span>
+          <span class="hangul">
+            문화 · munhwa
+          </span>
+        </div>
+
+        <div class="word">
+          <span class="hanja">歷史</span>
+          <span class="hangul">
+            역사 · yeoksa
+          </span>
+        </div>
+
+        <div class="word">
+          <span class="hanja">火曜日</span>
+          <span class="hangul">
+            화요일 · hwayoil
+          </span>
+        </div>
+
+        <div class="word">
+          <span class="hanja">研究</span>
+          <span class="hangul">
+            연구 · yeongu
+          </span>
+        </div>
+
+      </div>
+
+
+      <h4>四、漢字與朝鮮語固有詞的書寫</h4>
+
+      <p>
+        然而，朝鮮語本身具有不同於漢語的語法結構，
+        也保有大量固有詞彙。
+        除了直接使用漢文之外，
+        古代朝鮮半島還曾發展出
+        吏讀、鄉札、口訣等利用漢字
+        記錄或訓讀朝鮮語的方式。
+      </p>
+
+      <p>
+        1443年，朝鮮世宗創制訓民正音，
+        並於1446年正式頒布。
+        此後，朝鮮語逐漸發展出
+        以韓字（한글，Hangul）書寫固有詞、
+        助詞和語尾，
+        同時以漢字書寫漢字詞的混合書寫方式。
+      </p>
+
+
+      <h4>五、漢諺混寫與國漢文混用</h4>
+
+      <p>
+        這種混合書寫形式，
+        在十九世紀末至二十世紀的出版物、
+        報刊及部分正式文書中尤其常見，
+        一般稱為「漢諺混寫」，
+        亦稱「國漢文混用」
+        （국한문 혼용，國漢文混用）。
+      </p>
+
+      <p>
+        在漢諺混寫中，
+        漢字詞通常以漢字書寫，
+        而朝鮮語固有詞、助詞及語尾等
+        則以韓字書寫。
+        這使得不同來源的詞彙與語法成分，
+        可以在同一句話中以不同文字呈現。
+      </p>
+
+
+      <!-- 純韓字與漢諺混寫比較 -->
+
+      <div class="comparison">
+
+        <div class="comparison-label">
+          純韓字
+        </div>
+
+        <div class="comparison-text">
+          한국어의 한자어는 한자로 표기할 수 있다.
+        </div>
+
+        <div class="comparison-label">
+          漢諺混寫
+        </div>
+
+        <div class="comparison-text">
+          韓國語의 漢字語는 漢字로 表記할 수 있다.
+        </div>
+
+      </div>
+
+
+      <p>
+        兩句話的語言、語法與讀音基本相同，
+        差別主要在於漢字詞的書寫形式。
+        透過漢諺混寫，
+        我們可以更直觀地觀察朝鮮語詞彙，
+        與東亞漢字文化傳統之間的歷史聯繫。
+      </p>
+
+    </article>
+
+
+    <!-- =========================
+         頁尾
+         ========================= -->
+
+    <footer>
+
+      <p>
+        UniSinosphere — 漢字文化圈
+      </p>
+
+      <p>
+        一個持續建設中的東亞文字與語言文化研究網站
+      </p>
+
+      <p>
+        更多內容即將推出。
+      </p>
+
+      <p>
+        背景圖片：
+        <a
+          href="https://commons.wikimedia.org/wiki/Category:Hunminjeongeum_Haerye"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          《訓民正音解例本》— Wikimedia Commons
+        </a>
+      </p>
+
+    </footer>
+
   </main>
+
 </body>
 </html>
