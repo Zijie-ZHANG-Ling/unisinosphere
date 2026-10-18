@@ -103,19 +103,33 @@
     /* 右側內容：點選導覽列時切換各個 section */
     .workspace { min-width: 0; padding: 35px clamp(22px, 5vw, 88px) 50px; }
     .content { max-width: 960px; margin: 0 auto; }
-    .topline { display: flex; align-items: center; gap: 9px; color: #9b9186; font-size: 11px; letter-spacing: .16em; }
-    .topline::before { content: ""; width: 17px; height: 1px; background: var(--accent); }
     .view { animation: fade-in .2s ease; }
     @keyframes fade-in { from { opacity: .3; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     .page-heading { margin: 23px 0 10px; font-family: "Songti TC", "Noto Serif CJK TC", Georgia, serif; font-size: clamp(29px, 3.5vw, 41px); font-weight: 650; letter-spacing: .03em; }
     .page-lead { font-size: 15px; color: #77716a; line-height: 1.95; margin: 0 0 28px; }
-    .eyebrow { color: var(--accent); font-size: 11px; letter-spacing: .19em; font-weight: 700; }
     .panel { background: rgba(255,254,251,.95); border: 1px solid #ebe5dc; border-radius: 18px; box-shadow: var(--shadow); }
-    .home-intro { padding-top: 30px; }
-    .home-intro h1 { font: 700 clamp(38px, 5vw, 58px)/1.1 Georgia, serif; letter-spacing: -.03em; margin: 17px 0 10px; }
-    .home-script { font-size: 15px; color: var(--accent); letter-spacing: .07em; margin: 0 0 25px; line-height: 1.9; }
-    .home-descr { line-height: 2.05; font-size: 16px; max-width: 730px; margin: 0 0 26px; }
-    .home-search-title { margin: 34px 0 14px; font-size: 17px; font-weight: 650; }
+
+    /* 首頁：一句主題介紹 + 水平置中的查詢區塊 */
+    .home-center {
+      max-width: 760px;
+      margin: 0 auto;
+      padding-top: clamp(42px, 9vh, 95px);
+    }
+    .home-tagline {
+      margin: 0 0 45px;
+      font-family: "Songti TC", "Noto Serif CJK TC", Georgia, serif;
+      font-size: clamp(18px, 2.3vw, 24px);
+      font-weight: 600;
+      line-height: 1.8;
+      color: #57473e;
+      text-align: center;
+    }
+    .home-search-title {
+      margin: 0 0 17px;
+      font-size: 18px;
+      font-weight: 650;
+      text-align: center;
+    }
     .search-panel { padding: 23px; }
     .search-caption { color: #8a8178; font-size: 12px; margin-bottom: 11px; }
     .search-row { display: flex; gap: 10px; }
@@ -137,12 +151,6 @@
     .result-reading { font-size: 13px; color: #756e66; text-align: right; }
     .result-reading small { display: block; color: #9b948c; font-size: 11px; margin-top: 4px; }
     .footnote { color: #92887e; font-size: 12px; line-height: 1.85; }
-    .home-extra { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 23px; }
-    .feature { padding: 23px; text-decoration: none; display: block; }
-    .feature-label { font-size: 11px; color: var(--accent); letter-spacing: .12em; }
-    .feature h3 { margin: 10px 0; font: 650 21px "Songti TC", "Noto Serif CJK TC", serif; }
-    .feature p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.8; }
-    .feature:hover { border-color: #d4b6a5; }
 
     /* 介紹文章保留原來五個章節；改為更緊湊的版式 */
     .article { padding: clamp(22px, 4vw, 44px); margin-top: 21px; }
@@ -201,13 +209,13 @@
     }
     @media (max-width: 600px) {
       body { background-attachment: scroll; }
-      .home-intro { padding-top: 8px; }
-      .home-script { font-size: 12px; }
-      .home-descr { font-size: 14px; }
+      .home-center { padding-top: 28px; }
+      .home-tagline { font-size: 17px; margin-bottom: 33px; }
+      .home-search-title { font-size: 16px; }
       .search-panel, .convert-panel { padding: 16px; }
       .search-row { flex-direction: column; }
       .search-row .btn { width: 100%; }
-      .home-extra, .study-grid { grid-template-columns: 1fr; }
+      .study-grid { grid-template-columns: 1fr; }
       .study-card { min-height: 215px; }
       .article p { font-size: 14px; }
       .article h3 { font-size: 24px; }
@@ -239,21 +247,13 @@
 
     <div class="workspace">
       <div class="content">
-        <div class="topline">LANGUAGE · SCRIPT · SHARED HERITAGE</div>
 
-        <!-- 首頁：簡短介紹＋位於中央的查詢介面。點左上角站名可以返回。 -->
+        <!-- 首頁只保留一句簡介和查詢入口。其餘四個專題仍由左側選單進入。 -->
         <section class="view" id="view-home" data-page="home">
-          <div class="home-intro">
-            <div class="eyebrow">WELCOME TO UNISINOSPHERE</div>
-            <h1>UniSinosphere</h1>
-            <p class="home-script">漢字文化圈<br>han zi wen hua quan · hon zi men fa hyun · han ja mun hwa gweon</p>
-            <p class="home-descr">探索漢字文化圈各種語言之間的聯繫。大陸、臺灣、朝鮮半島、越南、日本等地，擁有不同的語言，卻共享著悠久的漢字文化傳統。</p>
-          </div>
-          <h2 class="home-search-title">查找朝鮮語漢字音 <span style="font-size:12px;color:#9a8980;font-weight:400">· 試用示例詞庫</span></h2>
-          <div id="home-search" class="panel search-panel"></div>
-          <div class="home-extra">
-            <a href="#intro" class="panel feature"><div class="feature-label">DISCOVER · 01</div><h3>朝鮮語漢字音與漢諺混寫</h3><p>認識朝鮮半島的漢文傳統、漢字詞與混合書寫方式。閱讀專題介紹 →</p></a>
-            <a href="#learn" class="panel feature"><div class="feature-label">EXPLORE · 02</div><h3>每日一字，一詞</h3><p>從單字到詞彙，隨機探索漢字、諺文與文觀部式羅馬字。開始學習 →</p></a>
+          <div class="home-center">
+            <p class="home-tagline">漢字文化圈的表意文字 · 漢字統一（Han Unification / Unihan）</p>
+            <h1 class="home-search-title">查找朝鮮語漢字音 <span style="font-size:12px;color:#9a8980;font-weight:400">· 試用示例詞庫</span></h1>
+            <div id="home-search" class="panel search-panel"></div>
           </div>
         </section>
 
