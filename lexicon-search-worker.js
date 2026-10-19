@@ -1,4 +1,3 @@
-
 /* UniSinosphere TSV fuzzy search. Runs in a Web Worker so the UI stays responsive.
    Each TSV must have: hangul, hanja, rrspeech, rrraw, rrrawsep (tab-separated). */
 "use strict";
@@ -7,6 +6,12 @@ const FILES = ["hangul_hanja_part1.tsv", "hangul_hanja_part2.tsv"];
 const COLUMNS = ["hangul", "hanja", "rrspeech", "rrraw", "rrrawsep"];
 const PAGE_SIZE = 60;
 const lexicon = [];
+// 僅記錄符合長度條件的行索引，避免每次按按鈕都重掃大型 TSV。
+const singleIndices = [];
+const wordIndices = [];
+let lastSinglePosition = -1;
+let lastWordPosition = -1;
+let latestRandomRequest = 0;
 let loadingPromise = null;
 const recentRequest = new Map();
 const resultSets = new Map();
@@ -41,7 +46,13 @@ async function readTsv(filename) {
     const raw = line.split("\t");
     if (raw.length !== 5) throw new Error(`${filename} 第 ${lineNumber} 行不是五欄。`);
     const normalized = raw.map(normalize);
+    const index = lexicon.length;
     lexicon.push({ raw, normalized });
+    // NFC 後以 Unicode 碼點計數，正確處理擴展區（輔助平面）漢字。
+    const hangulLen = codePointLength(raw[0].normalize("NFC"));
+    const hanjaLen = codePointLength(raw[1].normalize("NFC"));
+    if (hangulLen === 1 && hanjaLen === 1) singleIndices.push(index);
+    else if (hangulLen > 1 && hanjaLen > 1) wordIndices.push(index);
   };
 
   if (response.body && response.body.getReader) {
@@ -73,6 +84,10 @@ function ensureLoaded() {
   if (!loadingPromise) {
     loadingPromise = (async () => {
       lexicon.length = 0;
+      singleIndices.length = 0;
+      wordIndices.length = 0;
+      lastSinglePosition = -1;
+      lastWordPosition = -1;
       for (let i = 0; i < FILES.length; i++) {
         sendProgress(`正在載入詞庫 ${i + 1}/${FILES.length}：${FILES[i]} ……`);
         await readTsv(FILES[i]);
@@ -81,6 +96,8 @@ function ensureLoaded() {
     })().catch(error => {
       loadingPromise = null;
       lexicon.length = 0;
+      singleIndices.length = 0;
+      wordIndices.length = 0;
       throw error;
     });
   }
@@ -186,8 +203,46 @@ async function runSearch(context, requestId, value) {
   }
 }
 
+// Uniform sampling over all eligible TSV rows (both files), without repeating
+// the immediately previous choice when at least two candidates are present.
+function choosePosition(length, previous) {
+  if (length === 1) return 0;
+  if (previous < 0) return Math.floor(Math.random() * length);
+  return (previous + 1 + Math.floor(Math.random() * (length - 1))) % length;
+}
+
+function randomEntry(index) {
+  const [hangul, hanja, rrspeech, , rrrawsep] = lexicon[index].raw;
+  return { hangul, hanja, rrspeech, rrrawsep };
+}
+
+async function runRandom(requestId) {
+  try {
+    await ensureLoaded();
+    if (requestId !== latestRandomRequest) return;
+    if (singleIndices.length === 0 || wordIndices.length === 0) {
+      throw new Error("兩份 TSV 中找不到符合單字或詞彙長度條件的記錄。");
+    }
+    lastSinglePosition = choosePosition(singleIndices.length, lastSinglePosition);
+    lastWordPosition = choosePosition(wordIndices.length, lastWordPosition);
+    self.postMessage({
+      type: "randomResult",
+      requestId,
+      character: randomEntry(singleIndices[lastSinglePosition]),
+      word: randomEntry(wordIndices[lastWordPosition])
+    });
+  } catch (error) {
+    if (requestId === latestRandomRequest) {
+      self.postMessage({ type: "randomError", requestId, message: error.message });
+    }
+  }
+}
+
 self.addEventListener("message", ({ data }) => {
-  if (data.type === "search") {
+  if (data.type === "random") {
+    latestRandomRequest = data.requestId;
+    void runRandom(data.requestId);
+  } else if (data.type === "search") {
     recentRequest.set(data.context, data.requestId);
     resultSets.delete(data.context);
     void runSearch(data.context, data.requestId, data.value);
