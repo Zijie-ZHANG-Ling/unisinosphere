@@ -180,6 +180,19 @@
     .study-rr { color: #8d837a; font-size: 13px; margin-top: 6px; }
     .study-controls { text-align: center; margin: 29px 0 12px; }
     .study-controls .btn { padding: 15px 31px; }
+    /* TSV 詞庫可能包含較長的漢字詞：自動換行與縮小字體，避免溢出卡片 */
+    .study-card { min-width: 0; overflow: hidden; }
+    .study-word, .study-hangul, .study-rr {
+      max-width: 100%;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+    }
+    .study-word.is-long { font-size: clamp(27px, 3.6vw, 43px); }
+    .study-word.is-very-long { font-size: clamp(19px, 2.7vw, 29px); }
+    .study-rr { line-height: 1.65; }
+
 
     /* 轉寫器：目前只演示已核對的例句，不呼叫模型 */
     .convert-panel { padding: 23px; }
@@ -312,11 +325,11 @@
           <h1 class="page-heading">朝鮮語漢字音 隨機學習</h1>
           <p class="page-lead">每次認識一個漢字和一個漢字詞。點一下，發現新的讀音。</p>
           <div class="study-grid">
-            <div class="panel study-card"><div class="study-label">一 字 · HANJA</div><div id="random-character" class="study-character">山</div><div id="random-character-hangul" class="study-hangul" lang="ko">산</div><div id="random-character-rr" class="study-rr">san</div></div>
-            <div class="panel study-card"><div class="study-label">一 詞 · VOCABULARY</div><div id="random-word" class="study-word">文化</div><div id="random-word-hangul" class="study-hangul" lang="ko">문화</div><div id="random-word-rr" class="study-rr">munhwa</div></div>
+            <div class="panel study-card"><div class="study-label">一 字 · HANJA</div><div id="random-character" class="study-character">—</div><div id="random-character-hangul" class="study-hangul" lang="ko"></div><div id="random-character-rr" class="study-rr"></div></div>
+            <div class="panel study-card"><div class="study-label">一 詞 · VOCABULARY</div><div id="random-word" class="study-word">—</div><div id="random-word-hangul" class="study-hangul" lang="ko"></div><div id="random-word-rrspeech" class="study-rr"></div><div id="random-word-rrrawsep" class="study-rr"></div></div>
           </div>
           <div class="study-controls"><button class="btn btn-primary" id="randomize-btn" type="button">手氣不錯，學點新的 ↻</button></div>
-          <p class="footnote" style="text-align:center">示範版使用內建的小型字詞庫，之後會接入正式字音資料。</p>
+          <p class="footnote" id="random-status" role="status" aria-live="polite" style="text-align:center">進入此頁時會從兩份 TSV 隨機抽取一字、一詞。</p>
         </section>
 
         <!-- 轉寫頁：介面可互動；只有預設例句有示範結果 -->
@@ -411,9 +424,12 @@
         else el.removeAttribute("aria-current");
       });
       window.scrollTo(0, 0);
+      // 每次進入隨機學習頁都抽取全新的一組。
+      if (page === "learn") requestRandomPair();
     }
     window.addEventListener("hashchange", showPage);
-    showPage();
+    // 初次 showPage() 延後到搜尋 Worker 與隨機學習事件初始化之後，
+    // 以便重新整理 #learn 網址時，也能立即隨機抽取。
 
     // 以同一套介面查詢 GitHub Pages 上的兩份 TSV。
     // 大型詞庫的載入與編輯距離計算放在 Web Worker，避免卡住畫面。
@@ -446,6 +462,17 @@
     }
 
     lookupWorker.addEventListener("message", ({ data }) => {
+      if (data.type === "randomResult" || data.type === "randomError") {
+        if (data.requestId !== latestRandomRequest) return;
+        randomButton.disabled = false;
+        if (data.type === "randomError") {
+          randomStatus.textContent = "隨機學習讀取失敗：" + data.message;
+        } else {
+          showRandomPair(data.character, data.word);
+          randomStatus.textContent = "本次已從兩份 TSV 詞庫隨機抽取一字、一詞。";
+        }
+        return;
+      }
       if (data.type === "progress") {
         for (const context of searchContexts.values()) {
           if (context.busy) context.status.textContent = data.message;
@@ -479,6 +506,8 @@
       }
     });
     lookupWorker.addEventListener("error", event => {
+      randomButton.disabled = false;
+      randomStatus.textContent = "隨機學習無法啟動：請確認 lexicon-search-worker.js 已上傳。";
       for (const context of searchContexts.values()) {
         if (context.busy) {
           context.busy = false;
@@ -538,24 +567,37 @@
     mountSearch("home-search");
     mountSearch("lookup-search");
 
-    // 隨機學習：真的會更換示例資料，而且盡量不連續重複。
-    let charIndex = 0, wordIndex = 0;
-    function nextDifferentIndex(length, current) {
-      if (length <= 1) return 0;
-      const offset = 1 + Math.floor(Math.random() * (length - 1));
-      return (current + offset) % length;
+    // 隨機學習：同一個 Worker 與查詢共用已載入的兩份 TSV。
+    // 單字：hangul 和 hanja 的 Unicode 字符數都為 1。
+    // 詞彙：hangul 和 hanja 的 Unicode 字符數都大於 1。
+    const randomButton = document.getElementById("randomize-btn");
+    const randomStatus = document.getElementById("random-status");
+    const wordDisplay = document.getElementById("random-word");
+    let latestRandomRequest = 0;
+
+    function showRandomPair(character, word) {
+      document.getElementById("random-character").textContent = character.hanja;
+      document.getElementById("random-character-hangul").textContent = character.hangul;
+      document.getElementById("random-character-rr").textContent = character.rrspeech;
+
+      wordDisplay.textContent = word.hanja;
+      const length = Array.from(word.hanja.normalize("NFC")).length;
+      wordDisplay.classList.toggle("is-long", length >= 6 && length < 12);
+      wordDisplay.classList.toggle("is-very-long", length >= 12);
+      document.getElementById("random-word-hangul").textContent = word.hangul;
+      document.getElementById("random-word-rrspeech").textContent = word.rrspeech;
+      document.getElementById("random-word-rrrawsep").textContent = word.rrrawsep;
     }
-    document.getElementById("randomize-btn").addEventListener("click", () => {
-      charIndex = nextDifferentIndex(characters.length, charIndex);
-      wordIndex = nextDifferentIndex(words.length, wordIndex);
-      const ch = characters[charIndex], word = words[wordIndex];
-      document.getElementById("random-character").textContent = ch.h;
-      document.getElementById("random-character-hangul").textContent = ch.k;
-      document.getElementById("random-character-rr").textContent = ch.r;
-      document.getElementById("random-word").textContent = word.h;
-      document.getElementById("random-word-hangul").textContent = word.k;
-      document.getElementById("random-word-rr").textContent = word.r;
-    });
+
+    function requestRandomPair() {
+      const requestId = ++latestRandomRequest;
+      randomButton.disabled = true;
+      randomStatus.textContent = "正在載入詞庫並隨機抽取，請稍候……";
+      lookupWorker.postMessage({ type: "random", requestId });
+    }
+
+    randomButton.addEventListener("click", requestRandomPair);
+    showPage(); // 確保首次直接開啟 #learn 或重新整理時也會抽取。
 
     // 轉寫器只對已核對的示例句展示結果；其餘句子待正式模型接入。
     const knownDemo = new Map([
