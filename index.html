@@ -194,13 +194,21 @@
     .study-rr { line-height: 1.65; }
 
 
-    /* 轉寫器：目前只演示已核對的例句，不呼叫模型 */
+    /* 轉寫器：Turnstile 人機驗證 + Cloudflare Worker + DeepSeek */
     .convert-panel { padding: 23px; }
     .input-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
     .input-title small { color: #9b938b; font-weight: 400; margin-left: 8px; }
     .convert-input-wrap { position: relative; }
     .convert-input { width: 100%; min-height: 190px; resize: vertical; border: 1px solid #e5dcd1; border-radius: 12px; padding: 17px 17px 77px; background: white; font-size: 17px; line-height: 1.9; color: var(--ink); }
     .convert-action { position: absolute; bottom: 15px; right: 15px; }
+    .convert-action:disabled { opacity: .65; cursor: wait; }
+    .convert-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px; color: #8f8074; font-size: 12px; line-height: 1.8; margin: 8px 2px 0; }
+    .turnstile-panel { margin-top: 18px; padding: 15px 16px; border: 1px solid #e9e1d8; border-radius: 12px; background: #fcfaf6; }
+    .turnstile-label { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .turnstile-help { font-size: 12px; color: #83796f; line-height: 1.8; margin: 8px 0 0; }
+    #turnstile-widget { max-width: 460px; min-height: 65px; }
+    .convert-note { font-size: 12px; line-height: 1.9; color: #826f5d; margin: 18px 2px 0; }
+    @media (max-width: 409px) { #turnstile-widget { min-height: 140px; } }
     .convert-arrow { text-align: center; margin: 12px 0; color: #a98976; font-size: 25px; }
     .convert-output { width: 100%; min-height: 155px; resize: vertical; border: 1px solid #e5dcd1; border-radius: 12px; padding: 17px; background: #faf9f5; color: var(--ink); font-size: 17px; line-height: 1.9; }
     .convert-bottom { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
@@ -332,7 +340,7 @@
           <p class="footnote" id="random-status" role="status" aria-live="polite" style="text-align:center">進入此頁時會從兩份 TSV 隨機抽取一字、一詞。</p>
         </section>
 
-        <!-- 轉寫頁：介面可互動；只有預設例句有示範結果 -->
+        <!-- 轉寫頁：由 Turnstile 驗證訪客，再向 Cloudflare Worker 發送文字 -->
         <section class="view" id="view-converter" data-page="converter" hidden>
           <h1 class="page-heading">純諺文・漢諺混寫 變換器</h1>
           <p class="page-lead">輸入一段純諺文朝鮮語，將其中的漢字詞轉寫為漢字，保留朝鮮語語法與原有句式。</p>
@@ -342,17 +350,24 @@
               <textarea id="converter-input" class="convert-input" spellcheck="false" lang="ko" aria-label="輸入純諺文">한국어의 한자어는 한자로 표기할 수 있다.</textarea>
               <button class="btn btn-primary convert-action" id="convert-btn" type="button">轉寫到漢諺混寫 →</button>
             </div>
+            <div class="convert-meta"><span>最多輸入 500 個字元（依 Unicode 字符數計）</span><span id="converter-count" aria-live="polite"></span></div>
+            <div class="turnstile-panel">
+              <div class="turnstile-label">人機驗證 · Cloudflare Turnstile</div>
+              <div id="turnstile-widget" aria-label="人機驗證元件"></div>
+              <p class="turnstile-help" id="turnstile-status" aria-live="polite">正在載入人機驗證……</p>
+            </div>
             <div class="convert-arrow" aria-hidden="true">↓</div>
             <div class="input-title">漢諺混寫結果 <small>Hanja–Hangul output</small></div>
             <textarea id="converter-output" class="convert-output" readonly spellcheck="false" lang="ko" placeholder="轉寫結果將在此顯示……" aria-label="漢諺混寫結果"></textarea>
             <div class="convert-bottom">
               <button id="like-btn" type="button" class="btn btn-light" aria-pressed="false">♡ 按讚</button>
               <button id="feedback-btn" type="button" class="btn btn-light" aria-expanded="false">反饋問題</button>
-              <span class="convert-status" id="convert-status" aria-live="polite">演示模式 · 正式模型尚未接入</span>
+              <span class="convert-status" id="convert-status" role="status" aria-live="polite">等待輸入及人機驗證</span>
             </div>
-            <div class="feedback-area" id="feedback-area" hidden><p>感謝願意協助改善轉寫品質！目前這是介面示範版，尚未啟用意見提交與儲存功能。之後會在這裡加入錯字回報、正確候選字建議等項目。</p></div>
+            <div class="feedback-area" id="feedback-area" hidden><p>感謝願意協助改善轉寫品質！目前「反饋問題」只會展開這段說明，尚未啟用意見提交與儲存功能。</p></div>
+            <p class="convert-note">本功能使用 DeepSeek AI 模型進行轉寫，結果可能有誤，請自行核對漢字用法。輸入文字會經 Cloudflare Worker 傳送至 DeepSeek 處理；請勿輸入私人或敏感資料。</p>
           </div>
-          <div class="demo-note">目前只有上方預先核對的示例句可顯示轉寫結果。對其他輸入，介面不會假裝已完成真正的漢字轉換。未來將整合你的 Python 轉寫模型/API。</div>
+          <div class="demo-note">轉寫功能已接入 Cloudflare Worker，需先通過 Turnstile 驗證。正式公開使用仍須由網站管理員開啟後端權限。按讚和反饋目前不會儲存至伺服器。</div>
         </section>
 
         <footer class="site-footer">
@@ -426,6 +441,10 @@
       window.scrollTo(0, 0);
       // 每次進入隨機學習頁都抽取全新的一組。
       if (page === "learn") requestRandomPair();
+      // Turnstile 僅在轉寫頁顯示時渲染，避免 iframe 在隱藏區塊內初始化。
+      if (page === "converter" && typeof window.prepareConverterTurnstile === "function") {
+        window.prepareConverterTurnstile();
+      }
     }
     window.addEventListener("hashchange", showPage);
     // 初次 showPage() 延後到搜尋 Worker 與隨機學習事件初始化之後，
@@ -599,31 +618,178 @@
     randomButton.addEventListener("click", requestRandomPair);
     showPage(); // 確保首次直接開啟 #learn 或重新整理時也會抽取。
 
-    // 轉寫器只對已核對的示例句展示結果；其餘句子待正式模型接入。
-    const knownDemo = new Map([
-      ["한국어의 한자어는 한자로 표기할 수 있다.", "韓國語의 漢字語는 漢字로 表記할 수 있다."]
-    ]);
+    // 轉寫器：前端只保存公開 Site Key；DeepSeek 和 Turnstile Secret 都在 Cloudflare。
+    const CONVERTER_API_URL = "https://unisinosphere-converter.itif-hq.workers.dev/convert";
+    const TURNSTILE_SITE_KEY = "0x4AAAAAAFbh9YyOUJHRqW4R";
+    const CONVERTER_MAX_CHARS = 500;
+
     const converterInput = document.getElementById("converter-input");
     const converterOutput = document.getElementById("converter-output");
     const converterStatus = document.getElementById("convert-status");
-    document.getElementById("convert-btn").addEventListener("click", () => {
+    const converterButton = document.getElementById("convert-btn");
+    const converterCount = document.getElementById("converter-count");
+    const turnstileStatus = document.getElementById("turnstile-status");
+
+    let turnstileWidgetId = null;
+    let verifiedTurnstileToken = "";
+    let converterBusy = false;
+
+    function updateConverterCount() {
+      const count = Array.from(converterInput.value).length;
+      converterCount.textContent = `${count} / ${CONVERTER_MAX_CHARS}`;
+      converterCount.style.color = count > CONVERTER_MAX_CHARS ? "#b52b20" : "";
+    }
+    updateConverterCount();
+
+    function prepareConverterTurnstile() {
+      if (turnstileWidgetId !== null || !window.turnstile ||
+          document.getElementById("view-converter").hidden) return;
+
+      try {
+        turnstileWidgetId = window.turnstile.render("#turnstile-widget", {
+          sitekey: TURNSTILE_SITE_KEY,
+          action: "converter", // 後端 Siteverify 會核對 action 必須是 converter。
+          theme: "auto",
+          size: window.innerWidth < 410 ? "compact" : "flexible",
+          "response-field": false,
+          callback(token) {
+            verifiedTurnstileToken = token;
+            turnstileStatus.textContent = "人機驗證完成，可以開始轉寫。";
+          },
+          "expired-callback"() {
+            verifiedTurnstileToken = "";
+            turnstileStatus.textContent = "驗證已過期，請重新完成驗證。";
+          },
+          "error-callback"() {
+            verifiedTurnstileToken = "";
+            turnstileStatus.textContent = "人機驗證暫時失敗，請稍後重試或重新載入頁面。";
+          },
+          "timeout-callback"() {
+            verifiedTurnstileToken = "";
+            turnstileStatus.textContent = "驗證逾時，請重新完成驗證。";
+          }
+        });
+      } catch (error) {
+        turnstileStatus.textContent = "無法顯示人機驗證，請重新整理頁面後重試。";
+      }
+    }
+
+    // 網站是 hash 導航的單頁介面：只有打開 #converter 才渲染 widget。
+    window.prepareConverterTurnstile = prepareConverterTurnstile;
+    window.onConverterTurnstileReady = prepareConverterTurnstile;
+    window.onConverterTurnstileLoadError = () => {
+      turnstileStatus.textContent = "無法載入 Cloudflare 人機驗證，請檢查網絡或瀏覽器擴充功能。";
+    };
+
+    function resetConverterVerification() {
+      verifiedTurnstileToken = "";
+      if (turnstileWidgetId !== null && window.turnstile) {
+        try {
+          window.turnstile.reset(turnstileWidgetId);
+          turnstileStatus.textContent = "請等待新一輪人機驗證完成，再次轉寫時需要新憑證。";
+        } catch (error) {
+          turnstileStatus.textContent = "請重新整理頁面以取得新的人機驗證。";
+        }
+      }
+    }
+
+    converterButton.addEventListener("click", async () => {
+      if (converterBusy) return;
+
       const source = converterInput.value.trim();
-      if (!source) { converterOutput.value = ""; converterStatus.textContent = "請先輸入一段韓語文字。"; return; }
-      if (knownDemo.has(source)) {
-        converterOutput.value = knownDemo.get(source);
-        converterStatus.textContent = "已顯示預設示例（非模型生成）";
-      } else {
+      const length = Array.from(source).length;
+      if (!source) {
         converterOutput.value = "";
-        converterStatus.textContent = "尚未接入模型，暫時只能展示預設例句。";
+        converterStatus.textContent = "請先輸入一段朝鮮語文字。";
+        converterInput.focus();
+        return;
+      }
+      if (length > CONVERTER_MAX_CHARS) {
+        converterStatus.textContent = `輸入超過 ${CONVERTER_MAX_CHARS} 字，請先縮短內容。`;
+        converterInput.focus();
+        return;
+      }
+      if (!verifiedTurnstileToken) {
+        converterStatus.textContent = "請先完成人機驗證，再按轉寫按鈕。";
+        prepareConverterTurnstile();
+        return;
+      }
+
+      const token = verifiedTurnstileToken;
+      // Turnstile token 最多有效五分鐘、且只能使用一次；發送時立刻標記已消耗。
+      verifiedTurnstileToken = "";
+      converterBusy = true;
+      converterButton.disabled = true;
+      converterButton.textContent = "正在轉寫……";
+      converterInput.readOnly = true;
+      converterOutput.value = "";
+      converterStatus.textContent = "DeepSeek 思考模式正在轉寫，可能需要數十秒至數分鐘……";
+
+      try {
+        const response = await fetch(CONVERTER_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: source, turnstileToken: token }),
+          cache: "no-store",
+          credentials: "omit",
+          signal: AbortSignal.timeout(195000)
+        });
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("伺服器未返回有效的 JSON，請稍後重試。");
+        }
+
+        if (!response.ok || data?.ok !== true) {
+          if (response.status === 503 && data?.error === "公開轉寫尚未開放") {
+            throw new Error("後端尚未開放公開轉寫，請等待管理員完成啟用。");
+          }
+          if (response.status === 429) {
+            throw new Error("使用過於頻繁，請至少等待一分鐘再試。");
+          }
+          throw new Error(data?.error || `轉寫請求失敗（HTTP ${response.status}）。`);
+        }
+
+        if (typeof data.output !== "string" || !data.output.trim()) {
+          throw new Error("模型沒有返回有效轉寫結果。");
+        }
+
+        converterOutput.value = data.output;
+        converterStatus.textContent = "轉寫完成 · DeepSeek AI 生成，請核對字詞是否正確。";
+      } catch (error) {
+        if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+          converterStatus.textContent = "等待轉寫逾時，請縮短輸入後再試。";
+        } else if (error instanceof TypeError) {
+          converterStatus.textContent = "連線失敗，請檢查網絡或稍後重試。";
+        } else {
+          converterStatus.textContent = error?.message || "轉寫失敗，請稍後重試。";
+        }
+      } finally {
+        converterBusy = false;
+        converterButton.disabled = false;
+        converterButton.textContent = "轉寫到漢諺混寫 →";
+        converterInput.readOnly = false;
+        resetConverterVerification();
       }
     });
-    converterInput.addEventListener("input", () => { converterOutput.value = ""; converterStatus.textContent = "演示模式 · 正式模型尚未接入"; });
+
+    converterInput.addEventListener("input", () => {
+      updateConverterCount();
+      converterOutput.value = "";
+      converterStatus.textContent = "文字已更新，完成人機驗證後可以轉寫。";
+      // 新的輸入不應保留前一段轉寫結果的按讚狀態。
+      const likeButton = document.getElementById("like-btn");
+      likeButton.setAttribute("aria-pressed", "false");
+      likeButton.textContent = "♡ 按讚";
+    });
     const likeBtn = document.getElementById("like-btn");
     likeBtn.addEventListener("click", () => {
       const active = likeBtn.getAttribute("aria-pressed") !== "true";
       likeBtn.setAttribute("aria-pressed", String(active));
       likeBtn.textContent = active ? "♥ 已按讚" : "♡ 按讚";
-      converterStatus.textContent = "示範版按讚只在本頁有效，尚未儲存至伺服器。";
+      converterStatus.textContent = "按讚目前只在本頁有效，尚未儲存至伺服器。";
     });
     const feedbackBtn = document.getElementById("feedback-btn");
     const feedbackArea = document.getElementById("feedback-area");
@@ -632,5 +798,7 @@
       feedbackBtn.setAttribute("aria-expanded", String(!feedbackArea.hidden));
     });
   </script>
+  <!-- 必須在上述回調函式宣告之後載入；僅在 #converter 顯示時渲染 Turnstile。 -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onConverterTurnstileReady&amp;render=explicit" async defer onerror="onConverterTurnstileLoadError()"></script>
 </body>
 </html>
