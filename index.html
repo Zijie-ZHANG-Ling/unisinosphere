@@ -149,7 +149,9 @@
     .result { display: flex; align-items: center; gap: 16px; justify-content: space-between; border: 1px solid #e9e2d9; padding: 15px 16px; border-radius: 10px; background: #fff; }
     .result-hanzi { font: 650 24px "Songti TC", "Noto Serif CJK TC", serif; }
     .result-reading { font-size: 13px; color: #756e66; text-align: right; }
-    .result-reading small { display: block; color: #9b948c; font-size: 11px; margin-top: 4px; }
+    .result-reading div { display: block; }
+    .result-reading div + div { color: #9b948c; font-size: 11px; margin-top: 4px; }
+    .lookup-more-wrap { margin-top: 16px; text-align: center; }
     .footnote { color: #92887e; font-size: 12px; line-height: 1.85; }
 
     /* 介紹文章保留原來五個章節；改為更緊湊的版式 */
@@ -252,7 +254,7 @@
         <section class="view" id="view-home" data-page="home">
           <div class="home-center">
             <p class="home-tagline">統一 漢字文化圈 表意文字 · Unified Sinosphere Ideographs</p>
-            <h1 class="home-search-title">查找朝鮮語漢字音 <span style="font-size:12px;color:#9a8980;font-weight:400">· 試用示例詞庫</span></h1>
+            <h1 class="home-search-title">查找朝鮮語漢字音 <span style="font-size:12px;color:#9a8980;font-weight:400">· 詞庫查詢</span></h1>
             <div id="home-search" class="panel search-panel"></div>
           </div>
         </section>
@@ -302,7 +304,7 @@
           <h1 class="page-heading">朝鮮語漢字音 查詢</h1>
           <p class="page-lead">輸入諺文、文觀部式羅馬字或漢字，查詢對應的書寫與讀音。</p>
           <div id="lookup-search" class="panel search-panel"></div>
-          <div class="demo-note">目前僅收錄少量示例字詞，以確認查詢介面與互動方式。未來會接入完整的朝鮮語漢字音資料庫，並處理多音字、異體字與詞彙歧義。</div>
+          <div class="demo-note">查詢涵蓋已上傳的兩份 TSV 詞庫，對諺文、漢字與三種羅馬字欄位分別計算編輯距離相似度；相似度嚴格高於 60% 的記錄會顯示在結果中。</div>
         </section>
 
         <!-- 隨機學習頁 -->
@@ -361,9 +363,10 @@
       <button class="chip" type="button" data-query="hakgyo">hakgyo</button>
       <button class="chip" type="button" data-query="山">山</button>
     </div>
-    <div class="lookup-status" aria-live="polite">試試上面的示例詞條。</div>
+    <div class="lookup-status" aria-live="polite">輸入文字後按「查詢」，將搜尋兩份 TSV 詞庫。</div>
     <div class="lookup-results"></div>
-    <p class="footnote" style="margin:14px 0 0">現在是小型示範詞庫，非完整辭典；查不到不代表該漢字或讀音不存在。</p>
+    <div class="lookup-more-wrap"><button class="btn btn-light lookup-more" type="button" hidden>顯示更多結果 ↓</button></div>
+    <p class="footnote" style="margin:14px 0 0">查詢使用兩份 TSV：hangul_hanja_part1.tsv、hangul_hanja_part2.tsv；相似度須大於 60%。</p>
   </template>
 
   <script>
@@ -412,43 +415,125 @@
     window.addEventListener("hashchange", showPage);
     showPage();
 
-    // 以同一套程式安裝首頁和專屬查詢頁的搜索框。
-    function normalizeQuery(value) {
-      return value.trim().toLowerCase().normalize("NFD")
-        .replace(/[\u0300-\u036f\s\-·'’]/g, "");
+    // 以同一套介面查詢 GitHub Pages 上的兩份 TSV。
+    // 大型詞庫的載入與編輯距離計算放在 Web Worker，避免卡住畫面。
+    const lookupWorker = new Worker("lexicon-search-worker.js");
+    const searchContexts = new Map();
+    let nextSearchRequest = 0;
+
+    function makeResultRow(item) {
+      const row = document.createElement("div");
+      row.className = "result";
+      const hanja = document.createElement("div");
+      hanja.className = "result-hanzi";
+      hanja.textContent = item.hanja;
+      const reading = document.createElement("div");
+      reading.className = "result-reading";
+      // 右側顯示三行；rrraw 只用來搜尋，不顯示。
+      for (const content of [item.hangul, item.rrspeech, item.rrrawsep]) {
+        const line = document.createElement("div");
+        line.textContent = content;
+        reading.appendChild(line);
+      }
+      row.append(hanja, reading);
+      return row;
     }
+
+    function appendResults(context, items) {
+      const fragment = document.createDocumentFragment();
+      for (const item of items) fragment.appendChild(makeResultRow(item));
+      context.results.appendChild(fragment);
+    }
+
+    lookupWorker.addEventListener("message", ({ data }) => {
+      if (data.type === "progress") {
+        for (const context of searchContexts.values()) {
+          if (context.busy) context.status.textContent = data.message;
+        }
+        return;
+      }
+      const context = searchContexts.get(data.context);
+      if (!context || data.requestId !== context.requestId) return;
+      if (data.type === "error") {
+        context.busy = false;
+        context.status.textContent = "詞庫查詢失敗：" + data.message;
+        context.more.hidden = true;
+        return;
+      }
+      if (data.type === "results") {
+        context.busy = false;
+        context.results.replaceChildren();
+        context.shown = data.loaded;
+        appendResults(context, data.items);
+        context.status.textContent = data.total
+          ? `找到 ${data.total.toLocaleString()} 筆結果（編輯距離相似度 > 60%），目前顯示 ${data.loaded.toLocaleString()} 筆`
+          : "沒有找到相似度高於 60% 的記錄。";
+        context.more.hidden = context.shown >= data.total;
+        context.total = data.total;
+      } else if (data.type === "more") {
+        context.shown = data.loaded;
+        appendResults(context, data.items);
+        context.more.hidden = context.shown >= data.total;
+        context.status.textContent = `找到 ${data.total.toLocaleString()} 筆結果（編輯距離相似度 > 60%），目前顯示 ${context.shown.toLocaleString()} 筆`;
+        context.more.disabled = false;
+      }
+    });
+    lookupWorker.addEventListener("error", event => {
+      for (const context of searchContexts.values()) {
+        if (context.busy) {
+          context.busy = false;
+          context.status.textContent = "搜尋程式無法載入，請確認 lexicon-search-worker.js 已上傳至網站根目錄。";
+        }
+      }
+    });
+
     function mountSearch(targetId) {
       const target = document.getElementById(targetId);
       target.appendChild(document.getElementById("search-template").content.cloneNode(true));
       const form = target.querySelector("form");
       const input = target.querySelector(".search-field");
-      const status = target.querySelector(".lookup-status");
-      const results = target.querySelector(".lookup-results");
+      const context = {
+        id: targetId,
+        input,
+        status: target.querySelector(".lookup-status"),
+        results: target.querySelector(".lookup-results"),
+        more: target.querySelector(".lookup-more"),
+        requestId: 0,
+        shown: 0,
+        total: 0,
+        busy: false
+      };
+      searchContexts.set(targetId, context);
+
       function search() {
-        const query = normalizeQuery(input.value);
-        results.replaceChildren();
-        if (!query) { status.textContent = "試試上面的示例詞條。"; return; }
-        const matched = demoEntries.filter(item => [item.h, item.k, item.r].some(field => normalizeQuery(field).includes(query)));
-        status.textContent = matched.length ? `找到 ${matched.length} 筆示例結果` : "示範詞庫尚無此詞條；完整資料庫仍在建置中。";
-        for (const item of matched) {
-          const row = document.createElement("div");
-          row.className = "result";
-          const name = document.createElement("div");
-          name.className = "result-hanzi";
-          name.textContent = item.h;
-          const reading = document.createElement("div");
-          reading.className = "result-reading";
-          reading.textContent = item.k;
-          const roman = document.createElement("small");
-          roman.textContent = item.r;
-          reading.appendChild(roman);
-          row.append(name, reading);
-          results.appendChild(row);
+        const value = input.value;
+        context.requestId = ++nextSearchRequest;
+        context.results.replaceChildren();
+        context.more.hidden = true;
+        context.shown = 0;
+        context.total = 0;
+        if (!value.trim()) {
+          context.busy = false;
+          context.status.textContent = "請輸入諺文、漢字或羅馬字。";
+          lookupWorker.postMessage({ type: "cancel", context: targetId, requestId: context.requestId });
+          return;
         }
+        context.busy = true;
+        context.status.textContent = "正在載入詞庫並計算相似度，請稍候……";
+        lookupWorker.postMessage({ type: "search", context: targetId, requestId: context.requestId, value });
       }
+
       form.addEventListener("submit", event => { event.preventDefault(); search(); });
-      input.addEventListener("input", search);
-      target.querySelectorAll("[data-query]").forEach(chip => chip.addEventListener("click", () => { input.value = chip.dataset.query; search(); input.focus(); }));
+      target.querySelectorAll("[data-query]").forEach(chip => chip.addEventListener("click", () => {
+        input.value = chip.dataset.query;
+        search();
+        input.focus();
+      }));
+      context.more.addEventListener("click", () => {
+        context.more.disabled = true;
+        lookupWorker.postMessage({ type: "more", context: targetId,
+          requestId: context.requestId, offset: context.shown });
+      });
     }
     mountSearch("home-search");
     mountSearch("lookup-search");
