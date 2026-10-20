@@ -368,7 +368,7 @@
               <span class="convert-status" id="convert-status" role="status" aria-live="polite">等待輸入及人機驗證</span>
             </div>
             <div class="feedback-area" id="feedback-area" hidden><p>感謝願意協助改善轉寫品質！目前「反饋問題」只會展開這段說明，尚未啟用意見提交與儲存功能。</p></div>
-            <p class="convert-note">本功能使用 DeepSeek AI 模型進行轉寫，結果可能有誤，請自行核對漢字用法。輸入文字會經 Cloudflare Worker 傳送至 DeepSeek 處理；請勿輸入私人或敏感資料。</p>
+            <p class="convert-note">本功能使用 AI 大型語言模型進行轉寫，結果可能有誤，請自行核對漢字用法。輸入文字會經 Cloudflare Worker 傳送至 AI 大型語言模型處理；請勿輸入私人或敏感資料。</p>
           </div>
           <div class="demo-note">轉寫功能已接入 Cloudflare Worker，需先通過 Turnstile 驗證。正式公開使用仍須由網站管理員開啟後端權限。按讚和反饋目前不會儲存至伺服器。</div>
         </section>
@@ -725,7 +725,7 @@
       converterButton.textContent = "正在轉寫……";
       converterInput.readOnly = true;
       converterOutput.value = "";
-      converterStatus.textContent = "DeepSeek 思考模式正在轉寫，可能需要數十秒至數分鐘……";
+      converterStatus.textContent = "大型語言模型正在努力思考和轉寫，可能需要數十秒至數分鐘……";
 
       try {
         const response = await fetch(CONVERTER_API_URL, {
@@ -759,7 +759,7 @@
         }
 
         converterOutput.value = data.output;
-        converterStatus.textContent = "轉寫完成 · DeepSeek AI 生成，請核對字詞是否正確。";
+        converterStatus.textContent = "轉寫完成 · AI 生成，請核對字詞是否正確。";
       } catch (error) {
         if (error?.name === "TimeoutError" || error?.name === "AbortError") {
           converterStatus.textContent = "等待轉寫逾時，請縮短輸入後再試。";
