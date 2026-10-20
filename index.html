@@ -363,7 +363,8 @@
             <div class="input-title">漢諺混寫結果 <small>Hanja–Hangul output</small></div>
             <textarea id="converter-output" class="convert-output" readonly spellcheck="false" lang="ko" placeholder="轉寫結果將在此顯示……" aria-label="漢諺混寫結果"></textarea>
             <div class="convert-bottom">
-              <button id="like-btn" type="button" class="btn btn-light" aria-pressed="false">♡ 按讚</button>
+              <button id="like-btn" type="button" class="btn btn-light">♡ 按讚</button>
+              <span id="like-count" aria-live="polite" style="font-size:13px;color:#8e7d70;">載入讚數中…</span>
               <button id="feedback-btn" type="button" class="btn btn-light" aria-expanded="false">反饋問題</button>
               <span class="convert-status" id="convert-status" role="status" aria-live="polite">等待輸入及人機驗證</span>
             </div>
@@ -779,18 +780,85 @@
       updateConverterCount();
       converterOutput.value = "";
       converterStatus.textContent = "文字已更新，完成人機驗證後可以轉寫。";
-      // 新的輸入不應保留前一段轉寫結果的按讚狀態。
-      const likeButton = document.getElementById("like-btn");
-      likeButton.setAttribute("aria-pressed", "false");
-      likeButton.textContent = "♡ 按讚";
     });
+    
+    // ======================================
+    // 全站累計按讚 · Cloudflare D1
+    // ======================================
+    
+    const LIKES_API_URL =
+      "https://unisinosphere-converter.itif-hq.workers.dev/likes";
+    
     const likeBtn = document.getElementById("like-btn");
-    likeBtn.addEventListener("click", () => {
-      const active = likeBtn.getAttribute("aria-pressed") !== "true";
-      likeBtn.setAttribute("aria-pressed", String(active));
-      likeBtn.textContent = active ? "♥ 已按讚" : "♡ 按讚";
-      converterStatus.textContent = "按讚目前只在本頁有效，尚未儲存至伺服器。";
+    const likeCount = document.getElementById("like-count");
+    
+    let displayedLikes = null;
+    
+    // 顯示伺服器返回的累計讚數。
+    function showLikes(count) {
+      if (!Number.isSafeInteger(count) || count < 0) {
+        throw new Error("伺服器返回的讚數無效");
+      }
+    
+      // 避免多個請求同時返回時，較舊的數字覆蓋新數字。
+      displayedLikes = Math.max(displayedLikes ?? 0, count);
+      likeCount.textContent =
+        `${displayedLikes.toLocaleString()} 個讚`;
+    }
+    
+    // 檢查 API 回應。
+    async function readLikesResponse(response) {
+      const data = await response.json();
+    
+      if (!response.ok || data?.ok !== true) {
+        throw new Error(data?.error || "伺服器暫時無法處理請求");
+      }
+    
+      return data.count;
+    }
+    
+    // 網頁載入時，讀取目前的全站累計讚數。
+    async function loadLikes() {
+      try {
+        const response = await fetch(LIKES_API_URL, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "omit"
+        });
+    
+        showLikes(await readLikesResponse(response));
+      } catch (error) {
+        if (displayedLikes === null) {
+          likeCount.textContent = "暫時無法載入讚數";
+        }
+        console.error("載入讚數失敗：", error);
+      }
+    }
+    
+    // 每按一次，就發送一次 POST，讓資料庫累計加一。
+    // 不使用「已按讚」狀態，也不會改變按鈕文字。
+    likeBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch(LIKES_API_URL, {
+          method: "POST",
+          cache: "no-store",
+          credentials: "omit"
+        });
+    
+        showLikes(await readLikesResponse(response));
+      } catch (error) {
+        const previous = displayedLikes === null
+          ? ""
+          : `${displayedLikes.toLocaleString()} 個讚 · `;
+    
+        likeCount.textContent =
+          previous + (error?.message || "按讚失敗");
+    
+        console.error("按讚失敗：", error);
+      }
     });
+    
+    loadLikes();
     const feedbackBtn = document.getElementById("feedback-btn");
     const feedbackArea = document.getElementById("feedback-area");
     feedbackBtn.addEventListener("click", () => {
