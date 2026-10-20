@@ -145,6 +145,7 @@
     .chip { background: #faf7f2; color: #76675c; border: 1px solid #e8dfd4; border-radius: 30px; font-size: 12px; padding: 6px 12px; cursor: pointer; }
     .chip:hover { border-color: #cda996; }
     .lookup-status { color: var(--muted); font-size: 13px; padding-top: 13px; min-height: 20px; }
+    .lookup-status:empty { display: none; }
     .lookup-results { display: grid; gap: 10px; margin-top: 10px; }
     .result { display: flex; align-items: center; gap: 16px; justify-content: space-between; border: 1px solid #e9e2d9; padding: 15px 16px; border-radius: 10px; background: #fff; }
     .result-hanzi { font: 650 24px "Songti TC", "Noto Serif CJK TC", serif; }
@@ -152,6 +153,7 @@
     .result-reading div { display: block; }
     .result-reading div + div { color: #9b948c; font-size: 11px; margin-top: 4px; }
     .lookup-more-wrap { margin-top: 16px; text-align: center; }
+    .lookup-more-wrap:has(.lookup-more[hidden]) { display: none; }
     .footnote { color: #92887e; font-size: 12px; line-height: 1.85; }
 
     /* 介紹文章保留原來五個章節；改為更緊湊的版式 */
@@ -275,8 +277,9 @@
         <section class="view" id="view-home" data-page="home">
           <div class="home-center">
             <p class="home-tagline">統一 漢字文化圈 表意文字 · Unified Sinosphere Ideographs</p>
-            <h1 class="home-search-title">查找朝鮮語漢字音 <span style="font-size:12px;color:#9a8980;font-weight:400">· 詞庫查詢</span></h1>
-            <div id="home-search" class="panel search-panel"></div>
+            <div id="home-search" class="panel search-panel">
+              <h1 class="home-search-title">朝鮮語漢字音</h1>
+            </div>
           </div>
         </section>
 
@@ -391,10 +394,9 @@
       <button class="chip" type="button" data-query="hakgyo">hakgyo</button>
       <button class="chip" type="button" data-query="山">山</button>
     </div>
-    <div class="lookup-status" aria-live="polite">輸入文字後按「查詢」，將搜尋兩份 TSV 詞庫。</div>
+    <div class="lookup-status" aria-live="polite"></div>
     <div class="lookup-results"></div>
     <div class="lookup-more-wrap"><button class="btn btn-light lookup-more" type="button" hidden>顯示更多結果 ↓</button></div>
-    <p class="footnote" style="margin:14px 0 0">查詢使用兩份 TSV：hangul_hanja_part1.tsv、hangul_hanja_part2.tsv；相似度須大於 60%。</p>
   </template>
 
   <script>
